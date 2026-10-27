@@ -14,7 +14,7 @@ AX 데이터 서비스 트랙, 푸드&리테일 분야 팀 프로젝트.
 
 | 폴더 | 내용 |
 |---|---|
-| `research/` | 키워드 맵(`keyword_map.md`), 데이터 후보 종합표(`data_candidates.md`) |
+| `research/` | 키워드 맵(`keyword_map.md`), 데이터 소스 노트 통합본(`data_sources_all.md`) |
 | `research/data/` | 키워드별 "어떤 데이터가 어디에 있는지" 데이터 소스 노트 (`<키워드>.md`) |
 | `research/notes/` | 팀원별 조사 노트 |
 | `data/raw/` | 내려받은 원본 데이터 파일 (수정하지 않고 보관) |
