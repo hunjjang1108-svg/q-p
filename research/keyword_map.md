@@ -66,12 +66,24 @@
 | 음식점 리뷰·평점 | 이용자 평가 | H2 | 데이터 미확인 (추가 기능으로 보류) |
 | 대구 10미 | 대구시가 홍보하는 대표 음식 | 없음 | 데이터 미확인 (공식 목록 출처 확인 필요) |
 
-## 데이터 노트로 정리한 키워드 5개
+## 트랙 과제: 데이터 소스 후보 노트 5개 (제출본)
 
 | 키워드 | 노트 | 고른 이유 |
 |---|---|---|
-| 대구 사과 | [data/daegu_apple.md](data/daegu_apple.md) | 특산물 유형의 대표. 생산 통계와 판매처 데이터를 함께 볼 수 있음 |
-| 대구 전통시장 | [data/daegu_traditional_market.md](data/daegu_traditional_market.md) | 서비스 핵심 탐색 대상 |
-| 안지랑곱창골목 | [data/anjirang_gopchang_alley.md](data/anjirang_gopchang_alley.md) | 먹거리 골목 데이터가 실제로 공개된 사례 |
-| 대구 음식점 업종 분포 | [data/daegu_restaurant_distribution.md](data/daegu_restaurant_distribution.md) | 상권 비교 기능의 기반 데이터 |
-| 대구 외식비 | [data/daegu_dining_price.md](data/daegu_dining_price.md) | 가격 정보의 확보 가능성 확인 |
+| 대구 음식점 업종 분포 | [data/food_businesses.md](data/food_businesses.md) | 음식점·카페·식품 점포의 위치와 업종. 지도와 점포 수 비교의 기반 |
+| 대구 전통시장 | [data/traditional_markets.md](data/traditional_markets.md) | 서비스 핵심 탐색 대상 |
+| 안지랑곱창골목 (먹거리 상권) | [data/food_districts.md](data/food_districts.md) | 상권 단위 비교와 먹거리 골목 데이터 |
+| 대구 외식비 | [data/food_prices.md](data/food_prices.md) | 농수산물 가격과 외식비의 확보 가능성 확인 |
+| 대구 사과 (지역 먹거리 판매처) | [data/local_food_access.md](data/local_food_access.md) | 특산물·로컬푸드를 어디서 살 수 있는지 |
+
+## 키워드별 초기 노트 (참고)
+
+제출본보다 먼저 키워드 하나씩 작성한 노트다. 내용은 제출본에 대부분 포함되어 있다.
+
+| 키워드 | 노트 |
+|---|---|
+| 대구 사과 | [data/daegu_apple.md](data/daegu_apple.md) |
+| 대구 전통시장 | [data/daegu_traditional_market.md](data/daegu_traditional_market.md) |
+| 안지랑곱창골목 | [data/anjirang_gopchang_alley.md](data/anjirang_gopchang_alley.md) |
+| 대구 음식점 업종 분포 | [data/daegu_restaurant_distribution.md](data/daegu_restaurant_distribution.md) |
+| 대구 외식비 | [data/daegu_dining_price.md](data/daegu_dining_price.md) |
