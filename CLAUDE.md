@@ -17,8 +17,19 @@ AX 데이터 서비스 트랙, 푸드&리테일 분야 팀 프로젝트.
 | `research/` | 키워드 맵(`keyword_map.md`), 데이터 소스 노트 통합본(`data_sources_all.md`) |
 | `research/data/` | 키워드별 "어떤 데이터가 어디에 있는지" 데이터 소스 노트 (`<키워드>.md`) |
 | `research/notes/` | 팀원별 조사 노트 |
+| `scripts/` | 노트 통합본·데이터셋 목록을 만드는 Node.js 스크립트 |
 | `data/raw/` | 내려받은 원본 데이터 파일 (수정하지 않고 보관) |
 | `docs/` | 기획 문서, 회고, 팀 공유 자료 |
+
+## 스크립트 (Node.js, 설치할 패키지 없음)
+
+| 명령 | 하는 일 |
+|---|---|
+| `npm run build` | `research/data/` 노트 5개를 `research/data_sources_all.md`로 합침 |
+| `npm run sources` | 노트의 데이터셋 후보 표를 모아 `research/data/source_list.csv` 생성 |
+| `npm run check` | 위 목록을 만들면서 공식 URL 접속 상태(HTTP 코드)도 기록 |
+
+노트를 고친 뒤에는 `npm run build`로 통합본을 다시 만든다.
 
 ## 작업 원칙
 
