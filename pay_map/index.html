@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>비플페이 결제 지도</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1d1d1f; --muted: #6b6b70; --line: #e3e3e6;
+    --panel: #f7f7f8; --naver: #03c75a; --pin: #2557d6; --neon: #39ff14; --no: #9a9aa0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  .app { display: grid; grid-template-columns: 340px 1fr; height: 100%; }
+  aside { display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--panel); min-height: 0; }
+  header { padding: 14px 16px; border-bottom: 1px solid var(--line); background: #fff; }
+  h1 { font-size: 17px; margin: 0 0 10px; }
+  h1 span { color: var(--naver); }
+  form { display: flex; gap: 6px; }
+  input[type=text] { flex: 1; min-width: 0; padding: 10px; font-size: 16px; border: 2px solid var(--naver); border-radius: 8px; outline: none; }
+  button, .btn { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 12px; color: inherit; text-decoration: none; text-align: center; }
+  form button { background: var(--naver); color: #fff; border-color: var(--naver); font-weight: 700; }
+  .ex { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .ex a { color: var(--pin); cursor: pointer; margin-right: 6px; }
+  .sheet { display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--panel); }
+  .summary { padding: 10px 16px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); line-height: 1.5; }
+  .summary b { color: var(--fg); }
+  .kind { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #e8f0ff; color: var(--pin); margin-right: 4px; }
+  .kind.ai { background: #f1e8ff; color: #7a3bd6; }
+  ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+  li { padding: 10px 16px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 14px; }
+  li:hover { background: #fff; }
+  li small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+  .tag.ok { background: #e6ffe0; color: #1a7a00; border: 1px solid var(--neon); }
+  .tag.no { background: #eee; color: #555; }
+  .mapwrap { position: relative; min-height: 0; }
+  #map { width: 100%; height: 100%; }
+  .notice { position: absolute; left: 8px; bottom: 24px; z-index: 1000; max-width: calc(100% - 16px); padding: 6px 10px;
+    font-size: 12px; color: var(--muted); background: rgba(255,255,255,.92); border: 1px solid var(--line); border-radius: 8px; display: none; }
+
+  /* 지도 마커 */
+  .pin { width: 16px; height: 16px; border-radius: 50%; background: var(--pin); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); cursor: pointer; }
+  .pin.ok { width: 22px; height: 22px; border: 4px solid var(--neon); box-shadow: 0 0 6px var(--neon), 0 0 14px var(--neon); }
+  .pin.no { width: 12px; height: 12px; background: var(--no); }
+  .leaflet-div-icon { background: none; border: 0; }
+
+  /* 정보 카드 */
+  .pop { width: 260px; padding: 12px; background: #fff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.2); position: relative; }
+  .leaflet-popup-content .pop { box-shadow: none; padding: 0; }
+  .pop h3 { margin: 0 24px 4px 0; font-size: 15px; }
+  .pop p { margin: 2px 0; font-size: 12px; color: var(--muted); }
+  .pop .now { margin: 8px 0 6px; font-size: 13px; color: var(--fg); }
+  .pop .row { display: flex; gap: 6px; margin-top: 6px; }
+  .pop .row > * { flex: 1; padding: 8px 4px; font-size: 13px; }
+  .pop .yes { background: var(--neon); border-color: #2bc70f; font-weight: 700; }
+  .pop .no { background: #f1f1f3; }
+  .pop .nv { background: var(--naver); border-color: var(--naver); color: #fff !important; font-weight: 700; }
+  .pop .x { position: absolute; top: 6px; right: 6px; border: 0; background: none; font-size: 18px; padding: 2px 6px; color: var(--muted); }
+  .leaflet-popup-content .pop .x { display: none; }
+
+  /* 휴대폰: 지도 위, 목록 아래 */
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr 32vh; }
+    aside { display: contents; }
+    header { grid-row: 1; }
+    .mapwrap { grid-row: 2; }
+    .sheet { grid-row: 3; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <header>
+      <h1><span>비플페이</span> 결제 가능 식당 지도</h1>
+      <form id="f">
+        <input id="q" type="text" placeholder="도로명·동·역·건물 (예: 동성로)" autocomplete="off" enterkeyhint="search">
+        <button>검색</button>
+      </form>
+      <div class="ex">예시: <a>동성로</a><a>범어동</a><a>반월당역</a><a>동성로 근처 한식집</a></div>
+    </header>
+    <div class="sheet">
+      <div class="summary" id="summary">구획 이름을 입력하면 그 구획과 안에 있는 식당을 지도에 표시합니다.</div>
+      <ul id="list"></ul>
+    </div>
+  </aside>
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div class="notice" id="notice">네이버 지도 키가 없어 임시 지도(OpenStreetMap)로 표시 중입니다. <code>config.js</code>에 키를 넣으면 네이버 지도로 바뀝니다.</div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script type="module">
+import { ruleParse } from './ai.js';
+
+const SUPABASE_URL = 'https://zykkrfqeutjukffryjeu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_R69VC2k6AfMuHPi8keFcbA_Vds7wcJw';
+const TABLE = 'daegu_pay_status';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+const KIND = { road: '도로', dong: '동', zone: '상권', place: '반경 300m' };
+
+let gmap = null;           // 지도 어댑터 (네이버 또는 임시 지도)
+let area = null;           // 현재 구획 폴리곤
+let shown = [];            // 현재 화면의 식당 [id, 이름, 업종, 주소, 위도, 경도, 층]
+const markers = new Map(); // id → 지도 마커
+const status = new Map();  // id → '가능' | '불가능'
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const byId = (id) => shown.find((x) => x[0] === id);
+const loadScript = (src) => new Promise((ok, fail) => {
+  const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s);
+});
+const loadCss = (href) => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; document.head.appendChild(l); };
+
+function pinClass(id) {
+  const s = status.get(id);
+  return s === '가능' ? 'pin ok' : s === '불가능' ? 'pin no' : 'pin';
+}
+function pinSize(id) {
+  const s = status.get(id);
+  return s === '가능' ? 30 : s === '불가능' ? 16 : 20;
+}
+function pinZ(id) {
+  const s = status.get(id);
+  return s === '가능' ? 300 : s === '불가능' ? 100 : 200;
+}
+// GeoJSON Polygon/MultiPolygon → [[[lat, lng], ...], ...] (바깥 테두리만)
+function rings(geo) {
+  const polys = geo.type === 'MultiPolygon' ? geo.coordinates : [geo.coordinates];
+  return polys.map((p) => p[0].map(([lng, lat]) => [lat, lng]));
+}
+
+// 네이버 지도
+async function naverAdapter(key) {
+  await loadScript(`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(key)}`);
+  const N = naver.maps;
+  const map = new N.Map('map', {
+    center: new N.LatLng(35.8714, 128.6014), zoom: 14,
+    zoomControl: true, zoomControlOptions: { position: N.Position.TOP_RIGHT },
+  });
+  let card = null;
+  const icon = (id) => ({ content: `<div class="${pinClass(id)}"></div>`, anchor: new N.Point(pinSize(id) / 2, pinSize(id) / 2) });
+  N.Event.addListener(map, 'click', () => { card?.close(); card = null; });
+  return {
+    polygon(geo) {
+      return new N.Polygon({ map, paths: rings(geo).map((r) => r.map(([a, b]) => new N.LatLng(a, b))),
+        strokeColor: '#03c75a', strokeWeight: 3, fillColor: '#03c75a', fillOpacity: 0.08, clickable: false });
+    },
+    marker(r, onClick) {
+      const m = new N.Marker({ position: new N.LatLng(r[4], r[5]), map, title: r[1], icon: icon(r[0]), zIndex: pinZ(r[0]) });
+      N.Event.addListener(m, 'click', onClick);
+      return m;
+    },
+    restyle(m, id) { m.setIcon(icon(id)); m.setZIndex(pinZ(id)); },
+    remove(obj) { obj.setMap(null); },
+    fit(geo) {
+      const b = new N.LatLngBounds();
+      rings(geo).flat().forEach(([a, c]) => b.extend(new N.LatLng(a, c)));
+      map.fitBounds(b, { top: 30, right: 30, bottom: 30, left: 30 });
+    },
+    focus(r) { map.setCenter(new N.LatLng(r[4], r[5])); map.setZoom(18); },
+    openCard(m, html, id) {
+      card?.close();
+      card = new N.InfoWindow({ content: html, borderWidth: 0, backgroundColor: 'transparent', disableAnchor: true, pixelOffset: new N.Point(0, -14) });
+      card.rId = id; card.open(map, m);
+    },
+    updateCard(id, html) { if (card?.rId === id) card.setContent(html); },
+    closeCard() { card?.close(); card = null; },
+  };
+}
+
+// 네이버 키가 없을 때 쓰는 임시 지도
+async function leafletAdapter() {
+  loadCss('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');
+  $('notice').style.display = 'block';
+  const map = L.map('map').setView([35.8714, 128.6014], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  const icon = (id) => L.divIcon({ html: `<div class="${pinClass(id)}"></div>`, iconSize: [pinSize(id), pinSize(id)], className: '' });
+  return {
+    polygon(geo) {
+      return L.polygon(rings(geo), { color: '#03c75a', weight: 3, fillOpacity: 0.08, interactive: false }).addTo(map);
+    },
+    marker(r, onClick) {
+      const m = L.marker([r[4], r[5]], { icon: icon(r[0]), title: r[1], zIndexOffset: pinZ(r[0]) }).addTo(map);
+      m.on('click', onClick);
+      return m;
+    },
+    restyle(m, id) { m.setIcon(icon(id)); m.setZIndexOffset(pinZ(id)); },
+    remove(obj) { obj.remove(); },
+    fit(geo) { map.fitBounds(L.latLngBounds(rings(geo).flat()), { padding: [30, 30] }); },
+    focus(r) { map.setView([r[4], r[5]], 18); },
+    openCard(m, html, id) { m.unbindPopup(); m.bindPopup(html, { maxWidth: 280 }).openPopup(); m.rId = id; },
+    updateCard(id, html) { const m = markers.get(id); if (m?.isPopupOpen()) m.setPopupContent(html); },
+    closeCard() { map.closePopup(); },
+  };
+}
+
+function naverLinks(r) {
+  const [, name, , addr, lat, lng] = r;
+  const place = `https://map.naver.com/p/search/${encodeURIComponent(name + ' ' + (addr || '').replace(/^대구광역시\s*/, ''))}`;
+  const route = `nmap://route/walk?dlat=${lat}&dlng=${lng}&dname=${encodeURIComponent(name)}&appname=${encodeURIComponent(location.hostname || 'paymap')}`;
+  return { place, route };
+}
+
+function cardHtml(r) {
+  const [id, name, cat, addr, , , floor] = r;
+  const s = status.get(id);
+  const { place, route } = naverLinks(r);
+  return `<div class="pop">
+    <button class="x" data-close>×</button>
+    <h3>${esc(name)}</h3>
+    <p>${esc(cat)}</p>
+    <p>${esc(addr)}${floor ? ` · ${esc(floor)}층` : ''}</p>
+    <div class="now">비플페이 결제: <b>${s ?? '미확인'}</b></div>
+    <div class="row">
+      <button class="yes" data-id="${esc(id)}" data-s="가능">가능</button>
+      <button class="no" data-id="${esc(id)}" data-s="불가능">불가능</button>
+    </div>
+    <div class="row">
+      <a class="btn nv" href="${place}" target="_blank" rel="noopener">네이버 지도에서 보기</a>
+      ${isMobile ? `<a class="btn" href="${route}">길찾기</a>` : ''}
+    </div></div>`;
+}
+
+function openCard(r) { gmap.openCard(markers.get(r[0]), cardHtml(r), r[0]); }
+
+function renderList(head) {
+  const ok = shown.filter((r) => status.get(r[0]) === '가능').length;
+  const no = shown.filter((r) => status.get(r[0]) === '불가능').length;
+  if (head !== undefined) renderList.head = head;
+  $('summary').innerHTML = `${renderList.head ?? ''}식당 <b>${shown.length}</b>곳 · 비플페이 가능 <b>${ok}</b> · 불가능 <b>${no}</b> · 미확인 <b>${shown.length - ok - no}</b>`;
+  $('list').innerHTML = shown.map((r) => {
+    const s = status.get(r[0]);
+    const tag = s === '가능' ? '<span class="tag ok">가능</span>' : s === '불가능' ? '<span class="tag no">불가능</span>' : '';
+    return `<li data-id="${esc(r[0])}">${esc(r[1])}${tag}<small>${esc(r[2])} · ${esc(r[3])}</small></li>`;
+  }).join('');
+}
+
+function clearMap() {
+  gmap.closeCard();
+  for (const m of markers.values()) gmap.remove(m);
+  markers.clear();
+  if (area) { gmap.remove(area); area = null; }
+}
+
+// 검색어 → { area, mcls, scls, keywords }. 서버의 Gemini가 풀고, 실패하면 규칙 해석기.
+async function askAI(q) {
+  try {
+    const res = await fetch('api/nl-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }) });
+    if (res.ok) return { ...(await res.json()), by: 'ai' };
+    console.warn('AI 검색 해석 실패', res.status, await res.text());
+  } catch (e) { console.warn(e); }
+  return ruleParse(q);
+}
+
+// 업종·키워드 조건으로 식당 목록 거르기. 조건이 없으면 그대로.
+function applyFilter(stores, ai) {
+  if (!ai || (!ai.mcls.length && !ai.scls.length && !ai.keywords.length)) return stores;
+  return stores.filter(([, name, cat]) => {
+    const [m, s] = cat.split(' > ');
+    return ai.mcls.includes(m) || ai.scls.includes(s) || ai.keywords.some((k) => name.includes(k) || cat.includes(k));
+  });
+}
+
+async function search(q) {
+  q = q.trim();
+  if (!q) return;
+  $('summary').textContent = `“${q}” 구획을 찾는 중…`;
+  // 띄어쓰기가 있으면 자연어로 보고 AI에게 먼저 묻는다. 한 단어면 바로 구획 검색, 못 찾으면 AI에게 묻는다.
+  let ai = /\s/.test(q) ? await askAI(q) : null;
+  let { data, error } = await db.rpc('search_area', { q: ai?.area || q });
+  if (!error && data.kind === 'none' && !ai) {
+    ai = await askAI(q);
+    if (ai?.area) ({ data, error } = await db.rpc('search_area', { q: ai.area }));
+  }
+  clearMap();
+  shown = [];
+  $('list').innerHTML = '';
+  if (error) { $('summary').textContent = '검색 중 오류가 났습니다: ' + error.message; return; }
+  if (data.kind === 'none') {
+    $('summary').innerHTML = `“${esc(q)}”에 해당하는 대구 구획을 찾지 못했습니다.<br>도로명(동성로), 동(범어동), 역(반월당역), 건물(현대백화점) 이름이나 “동성로 근처 한식집”처럼 검색해 보세요.`;
+    return;
+  }
+  shown = applyFilter(data.stores, ai);
+  await loadStatus(shown.map((r) => r[0]));
+  area = gmap.polygon(data.polygon);
+  for (const r of shown) markers.set(r[0], gmap.marker(r, () => openCard(r)));
+  gmap.fit(data.polygon);
+  const labels = data.labels || [];
+  const food = ai ? [...ai.mcls, ...ai.scls, ...ai.keywords] : [];
+  renderList(`<span class="kind">${KIND[data.kind]}</span>${esc(labels.slice(0, 6).join(', '))}${labels.length > 6 ? ` 외 ${labels.length - 6}` : ''}<br>`
+    + (food.length ? `<span class="kind ai">${ai.by === 'ai' ? 'AI' : '자동'}</span>${esc(food.join(', '))}만 표시<br>` : '')
+    + (data.excluded ? `<small>식당이 아닌 업종(카페 등) ${data.excluded}곳 제외</small><br>` : ''));
+}
+
+async function loadStatus(ids) {
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await db.from(TABLE).select('restaurant_id,status').in('restaurant_id', ids.slice(i, i + 200));
+    if (error) { console.error(error); continue; }
+    for (const row of data) status.set(row.restaurant_id, row.status);
+  }
+}
+
+function applyStatus(id) {
+  const m = markers.get(id);
+  if (m) gmap.restyle(m, id);
+  const r = byId(id);
+  if (r) { gmap.updateCard(id, cardHtml(r)); renderList(); }
+}
+
+async function mark(id, s) {
+  const r = byId(id);
+  status.set(id, s); applyStatus(id);
+  const { error } = await db.from(TABLE).upsert({ restaurant_id: id, name: r?.[1], status: s, updated_at: new Date().toISOString() });
+  if (error) alert('저장에 실패했습니다: ' + error.message);
+}
+
+// 다른 사용자가 바꾼 상태를 실시간 반영 (가장 최근 응답이 이긴다)
+db.channel('pay').on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, ({ new: row }) => {
+  if (!row?.restaurant_id) return;
+  status.set(row.restaurant_id, row.status);
+  applyStatus(row.restaurant_id);
+}).subscribe();
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-close]')) return gmap.closeCard();
+  const b = e.target.closest('.pop button[data-s]');
+  if (b) return mark(b.dataset.id, b.dataset.s);
+  const ex = e.target.closest('.ex a');
+  if (ex) { $('q').value = ex.textContent; return search(ex.textContent); }
+  const li = e.target.closest('li[data-id]');
+  if (li) { const r = byId(li.dataset.id); gmap.focus(r); openCard(r); }
+});
+$('f').addEventListener('submit', (e) => { e.preventDefault(); $('q').blur(); search($('q').value); });
+
+(async () => {
+  const key = window.NAVER_MAP_KEY_ID;
+  try { gmap = key ? await naverAdapter(key) : await leafletAdapter(); }
+  catch { gmap = await leafletAdapter(); }
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) { $('q').value = q; search(q); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pay-map",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["pay_map/scripts/dev.mjs"],
+      "port": 8765
+    }
+  ]
+}

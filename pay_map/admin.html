@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>업종 판단 관리</title>
+<style>
+  :root { --bg: #fff; --fg: #1d1d1f; --muted: #6b6b70; --line: #e3e3e6; --ok: #1a7a00; --no: #b3261e; --naver: #03c75a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 40px; background: var(--bg); color: var(--fg);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-size: 14px; }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p { color: var(--muted); margin: 4px 0 14px; line-height: 1.6; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 8px 14px; }
+  button.primary { background: var(--naver); border-color: var(--naver); color: #fff; font-weight: 700; }
+  button:disabled { opacity: .5; cursor: default; }
+  #msg { color: var(--muted); }
+  .wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  td.n { text-align: right; color: var(--muted); }
+  .ok { color: var(--ok); font-weight: 700; }
+  .no { color: var(--no); font-weight: 700; }
+  .reason { color: var(--muted); font-size: 12px; }
+  .new { background: #fffbe6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>업종 판단 관리</h1>
+  <p>Gemini가 업종마다 “식당인지”를 판단합니다. “식당 아님”으로 저장한 업종은 지도에서 빠집니다.<br>
+     운영자 PC의 <b>로컬 개발 서버</b>(<code>npm run dev</code>)로 열어야 판단·저장할 수 있습니다.</p>
+  <div class="bar">
+    <button class="primary" id="run">Gemini로 판단</button>
+    <button id="save" disabled>결과 저장</button>
+    <span id="msg"></span>
+  </div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>중분류</th><th>소분류</th><th>업소 수</th><th>현재 판단</th><th>AI 새 판단</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5">불러오는 중…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+<script type="module">
+const SUPABASE_URL = 'https://zykkrfqeutjukffryjeu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_R69VC2k6AfMuHPi8keFcbA_Vds7wcJw';
+const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let cats = [];          // [{mcls, scls, n}]
+let current = new Map(); // "mcls|scls" → {is_restaurant, reason, decided_by}
+let proposed = [];       // [{index, is_restaurant, reason}]
+
+const verdict = (d) => d ? `<span class="${d.is_restaurant ? 'ok' : 'no'}">${d.is_restaurant ? '식당' : '식당 아님'}</span>
+  <div class="reason">${esc(d.reason)}${d.decided_by && d.decided_by !== 'ai' ? ' (사람이 수정)' : ''}</div>` : '<span class="reason">없음 (식당으로 봄)</span>';
+
+function render() {
+  const byIndex = new Map(proposed.map((d) => [d.index, d]));
+  $('rows').innerHTML = cats.map((c, i) => {
+    const now = current.get(`${c.mcls}|${c.scls}`);
+    const next = byIndex.get(i);
+    const changed = next && (!now || now.is_restaurant !== next.is_restaurant);
+    return `<tr class="${changed ? 'new' : ''}"><td>${esc(c.mcls)}</td><td>${esc(c.scls)}</td><td class="n">${c.n}</td>
+      <td>${verdict(now)}</td><td>${next ? verdict(next) : ''}</td></tr>`;
+  }).join('');
+}
+
+async function load() {
+  const [c, f] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/store_categories`, { method: 'POST', headers, body: '{}' }).then((r) => r.json()),
+    fetch(`${SUPABASE_URL}/rest/v1/daegu_category_filter?select=*`, { headers }).then((r) => r.json()),
+  ]);
+  cats = c;
+  current = new Map(f.map((r) => [`${r.mcls}|${r.scls}`, r]));
+  render();
+}
+
+$('run').addEventListener('click', async () => {
+  $('run').disabled = true;
+  $('msg').textContent = 'Gemini가 판단하는 중…';
+  try {
+    const r = await fetch('api/classify-categories', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cats: cats.map(({ mcls, scls }) => ({ mcls, scls })) }) });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error ?? r.status);
+    proposed = body.decisions;
+    $('msg').textContent = `${proposed.length}개 업종 판단 완료. 노란 줄은 지금과 달라지는 업종입니다.`;
+    $('save').disabled = !proposed.length;
+    render();
+  } catch (e) {
+    $('msg').textContent = '실패: ' + e.message;
+  } finally {
+    $('run').disabled = false;
+  }
+});
+
+$('save').addEventListener('click', async () => {
+  $('save').disabled = true;
+  const rows = proposed.map((d) => ({ mcls: cats[d.index].mcls, scls: cats[d.index].scls, is_restaurant: d.is_restaurant, reason: d.reason }));
+  const r = await fetch('api/save-categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
+  const body = await r.json().catch(() => ({}));
+  $('msg').textContent = r.ok ? `${body.saved}개 저장했습니다. (사람이 직접 고친 업종은 그대로 둡니다)` : '저장 실패: ' + (body.error ?? r.status);
+  if (r.ok) { proposed = []; await load(); } else $('save').disabled = false;
+});
+
+load();
+</script>
+</body>
+</html>

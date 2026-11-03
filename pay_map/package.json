@@ -1,0 +1,12 @@
+{
+  "name": "pay-map",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync_sdsc.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^2.32.0"
+  }
+}
